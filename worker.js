@@ -130,17 +130,18 @@ module.exports.run = function (worker) {
 
 
       //login
+
      socket.on('login', function (data) {
-       // body...
+      // body...
       console.log(socket.authToken);
        verify_jwt(data, "thisismysecretkey", null, function (err, data) {
          // body...
           socket.signedAuthToken= data;
 
-         if(err){
-          console.log(err);
-         }
-         else {
+          if(err){
+            console.log(err);
+          }
+          else {
 
           console.log(data);
             User.findOne({_id:data._id},function(err,user){
@@ -156,11 +157,15 @@ module.exports.run = function (worker) {
 
 
      })
+
+      socket.on('disconnect',function(){
+        console.log("client disconnected")
+        channel.close();
+      })
+
+
     });
 
-    socket.on('disconnect',function(){
-      console.log("client disconnected")
-      channel.close();
-    })
+   
   });
 };
