@@ -214,7 +214,7 @@ apiRouter.post("/user/auth/login", function (req, res) {
 });
 
 apiRouter.route('/user/resetpassword')
-    // generate a reset token and send an email
+// generate a reset token and send an email
     .post(function (req, res) {
         async.waterfall([
                 function (done) {
@@ -392,7 +392,7 @@ apiRouter.post('/user/availability', function (req, res) {
 
 // parameter required is 
 apiRouter.route('/user/me')
-    // This route will be used by angular to check if a user is logged in
+// This route will be used by angular to check if a user is logged in
     .get(passport.authenticate('jwt', {session: false}), function (req, res) {
         console.log(req.user);
         if (req.isAuthenticated()) {
