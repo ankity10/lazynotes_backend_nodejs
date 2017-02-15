@@ -2,14 +2,13 @@
 	//Redis
 	"redis":
 	{
-		"username:note_hash,from_client_id,to_client_id":
+		"username:note_hash,to_client_id":
 		{
 			"note_hash": "asdsadasfasf",
-			"from_client_id": "HP",
-			"note_text": "Terminal",
 			"window_title": "Facebook",
 			"process_name": "chrome",
-			"resolve_conflict_flag": false	
+			"resolve_flag": false,
+			"clients": "{'Hp': 'Terminal', 'Sony': 'Terminal 2'}", //clients value is stringified	
 		}	
 	},
 
@@ -21,7 +20,7 @@
 		"note_text": "Terminal",
 		"window_title": "Facebook",
 		"process_name": "chrome",
-		"resolve_conflict_flag": false
+		"resolve_flag": false
 	},
 
 	// notes collection
@@ -29,6 +28,6 @@
         "note_hash": "45g65735et",
         "window_title": "gedit",
         "process_name": "gedit",
-        "client": {"hp pavilion dv6": "This is my note", "Sony": "Terminal note"}
+        "clients": {"hp pavilion dv6": "This is my note", "Sony": "Terminal note"}
     }
 }

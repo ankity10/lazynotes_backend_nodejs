@@ -23,3 +23,10 @@ var user = {
 var new_user = new User(user);
 console.log(new_user.get_clients());
 new_user.save();
+
+var user;
+User.findOne({"username": 'ankit'}, function(error, user)
+{
+	console.log(error);
+	console.log(user);
+});
