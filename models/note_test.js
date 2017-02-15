@@ -23,3 +23,18 @@ note_obj.save(function (err, data) {
     console.log(err, data);
 });
 
+noteCollection.remove({note_hash:"nkhr888723r"}, function(error)
+{
+	if(error)
+		console.log(error);
+	else
+		console.log("deleted");
+});
+
+noteCollection.findOne({note_hash:"nkhr888723r"}, function(error, obj)
+{
+	if(error)
+		console.log(error);
+	console.log("obj = " + obj);
+});
+
