@@ -199,7 +199,7 @@ apiRouter.post("/user/auth/login", function (req, res) {
                 });
                 res.json({
                     success: true,
-                    token: "JWT " + token
+                    token: token
                 });
             }
             else {

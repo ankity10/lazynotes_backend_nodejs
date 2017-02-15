@@ -183,7 +183,6 @@ UserSchema.methods.toJSON = function () {
 
 UserSchema.methods.toJWTUser = function () {
     var obj = this.toObject();
-
     delete obj.hashed_password;
     delete obj.salt;
     delete obj.verificationToken;
@@ -193,17 +192,7 @@ UserSchema.methods.toJWTUser = function () {
     delete obj.email;
     delete obj.username;
     delete obj.verified;
-    delete obj.country;
-    delete obj.role;
     delete obj.name;
-    delete obj.provider;
-    delete obj.google;
-    delete obj.facebook;
-    delete obj.twitter;
-    delete obj.profile;
-    delete obj.github;
-    delete obj.linkedin;
-
     return obj;
 };
 

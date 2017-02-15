@@ -8,6 +8,9 @@ var verify_jwt = require('./utils/verify_jwt');
 var User = require('./models/user');
 // Mongoose ODM to manipulate mongodb.
 
+// Creating instance of config module
+var config = require('./config/config');
+
 module.exports.run = function (worker) {
 
     console.log('   >> Worker PID:', process.pid);
@@ -37,12 +40,25 @@ module.exports.run = function (worker) {
 
     scServer.addMiddleware(scServer.MIDDLEWARE_EMIT, function (req, next) {
 
-
         if (req.event == 'sendmsg') {
-            console.log(req.socket.signedAuthToken)
-            next();
-            //verify token;
-
+            try{
+                var signedAuthToken = req.socket.signedAuthToken;
+            }
+            catch(err) {
+                console.log("Authenticated is pending ",err);
+            }
+            verify_jwt(signedAuthToken, config.secret, "", function (err, data) {
+                if(err) {
+                    console.error("error in jwt verification ",err);
+                    // next("Error in authentication ", err);
+                    // req.socket.disconnect(err);
+                }
+                else if(data) {
+                    console.log("Successfully verified");
+                    console.log(req.socket.user);
+                    // next();
+                }
+            });
         }
         else {
             next();
@@ -65,7 +81,6 @@ module.exports.run = function (worker) {
 
     httpServer.on('request', app);
 
-
     var apiRouter = require('./api');
     app.use('/api', apiRouter);
 
@@ -76,7 +91,6 @@ module.exports.run = function (worker) {
     });
 
     app.use(rootRouter);
-
     // http handler finished
 
 
@@ -92,9 +106,9 @@ module.exports.run = function (worker) {
             socket.on("username", function (data, res) {
 
                 console.log("username got callled")
+                // console.log(socket.signedAuthToken);
                 var exchange = "from_" + data;
                 channel.assertExchange(exchange, 'fanout', {durable: true});
-
 
                 channel.assertQueue(data, {durable: true});
                 // mock clients object, to be replaced by db query to return clients
@@ -120,49 +134,57 @@ module.exports.run = function (worker) {
                 }, {noAck: false});
             });
 
-            //Sending messages to receiver
-            socket.on('sendmsg', function (data, res) {
-                console.log("Message got called");
-                var sender = data.sender;
-                var rec = data.receiver;
-                channel.publish("from_" + sender, '', new Buffer(JSON.stringify(data)), {persistent: true});
-
-                // if(check_something) {
-                //   res(false, data);
-                // }
-                // else {
-                //   res(true, data);
-                // }
-
-            });
-
 
             //login
+            socket.on('authStateChange', function (data) {
+                console.log("authStateChange called");
+                // socket.setAuthToken(token);
+                console.log(socket.authState);
+            });
 
-            socket.on('login', function (data) {
-                // body...
-                console.log(socket.authToken);
-                verify_jwt(data, "thisismysecretkey", null, function (err, data) {
-                    // body...
-                    socket.signedAuthToken = data;
-
-                    if (err) {
-                        console.log(err);
+            socket.on('auth', function (data) {
+                var signedtoken = data;
+                console.log("Authenticate called");
+                console.log(socket.authState);
+                // socket.setAuthToken(data);
+                // console.log(socket.authKey);
+                verify_jwt(signedtoken, config.secret, "", function (err, data) {
+                    if(err) {
+                        console.error("error in jwt verification ",err);
                     }
-                    else {
+                    else if(data) {
+                        console.log("Successfully verified");
+                        socket.signedAuthToken = signedtoken;
+                        socket.authToken = data;
+                        // console.log(data);
 
-                        console.log(data);
-                        User.findOne({_id: data._id}, function (err, user) {
-                            if (err) {
-                                console.log(err);
+                        User.findOne({_id:data._id}, function (err, user) {
+                            if(err) {
+                                console.log("Database Error, ", err);
                             }
                             else if (user) {
-                                console.log(user);
-                            }
-                        })
-                    }
-                })
+                                user = user.toJWTUser()
+                                socket.user = user;
+                                // console.log(user);
 
+                                //Sending messages to receiver
+                                socket.on('sendmsg', function (data, res) {
+                                    console.log("Message got called");
+                                    var sender = data.sender;
+                                    var rec = data.receiver;
+                                    channel.publish("from_" + sender, '', new Buffer(JSON.stringify(data)), {persistent: true});
+                                });
+
+                                socket.emit("auth-success", user);
+                            }
+                            else {
+                                console.log("No user found")
+                            }
+                        });
+                        socket.authState = "authenticated";
+                    }
+                });
+                console.log(socket.authState);
 
             })
 
