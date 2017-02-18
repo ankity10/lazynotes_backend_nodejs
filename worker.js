@@ -6,7 +6,10 @@ var rabbit = require('./rabbit');
 var verify_jwt = require('./utils/verify_jwt');
 // User model to manipulate data in mongodb
 var User = require('./models/user');
-// Mongoose ODM to manipulate mongodb.
+
+var redis_api = require('./redis_module');
+
+var utils = require('./utils');
 
 // Creating instance of config module
 var config = require('./config/config');
@@ -103,44 +106,36 @@ module.exports.run = function (worker) {
         // create rabbitmq channel (virtual connection)
         rabbit.connection.createChannel(function (err, channel) {
             // create username queue in rabbitmq and consume realtime messages
-            socket.on("username", function (data, res) {
+            // socket.on("username", function (data, res) {
 
-                console.log("username got callled")
-                // console.log(socket.signedAuthToken);
-                var exchange = "from_" + data;
-                channel.assertExchange(exchange, 'fanout', {durable: true});
+            //     console.log("username got callled")
+            //     // console.log(socket.signedAuthToken);
+            //     var exchange = "from_" + data;
+            //     channel.assertExchange(exchange, 'fanout', {durable: true});
 
-                channel.assertQueue(data, {durable: true});
-                // mock clients object, to be replaced by db query to return clients
-                var clients = ['client1', 'client2'];
-                for (var i = clients.length - 1; i >= 0; i--) {
-                    if (data != clients[i]) {
-                        channel.bindQueue(clients[i], exchange, '');
-                    }
-                }
-                res(null, true)
+            //     channel.assertQueue(data, {durable: true});
+            //     // mock clients object, to be replaced by db query to return clients
+            //     var clients = ['client1', 'client2'];
+            //     for (var i = clients.length - 1; i >= 0; i--) {
+            //         if (data != clients[i]) {
+            //             channel.bindQueue(clients[i], exchange, '');
+            //         }
+            //     }
+            //     res(null, true)
 
-                channel.consume(data, function (msg) {
-                    var Message = {};
-                    Message.content = JSON.parse(msg.content.toString());
-                    Message.redelievery = msg.fields.redelivered;
-                    console.log('data is' + JSON.stringify(Message));
-                    socket.emit('msg', Message, function (err, data) {
-                        if (data) {
-                            console.log("data is recieved by client");
-                            channel.ack(msg);
-                        }
-                    });
-                }, {noAck: false});
-            });
-
-
-            //login
-            socket.on('authStateChange', function (data) {
-                console.log("authStateChange called");
-                // socket.setAuthToken(token);
-                console.log(socket.authState);
-            });
+            //     channel.consume(data, function (msg) {
+            //         var Message = {};
+            //         Message.content = JSON.parse(msg.content.toString());
+            //         Message.redelievery = msg.fields.redelivered;
+            //         console.log('data is' + JSON.stringify(Message));
+            //         socket.emit('msg', Message, function (err, data) {
+            //             if (data) {
+            //                 console.log("data is recieved by client");
+            //                 channel.ack(msg);
+            //             }
+            //         });
+            //     }, {noAck: false});
+            // });
 
             socket.on('auth', function (data) {
                 var signedtoken = data;
@@ -158,6 +153,25 @@ module.exports.run = function (worker) {
                         socket.authToken = data;
                         // console.log(data);
 
+                        //Sending messages to receiver
+                        socket.on('sendmsg', function (data) {
+                            console.log("Message got called");
+                            var resolve_flag = data.resolve_flag;
+                            console.log("log data", data);
+
+                            if(resolve_flag) {
+                                utils.resolve_merge_conflict(socket.user, data.from_client_id, data, channel);
+                            }
+                            else {
+                                utils.insert_note(socket.user, data.from_client_id, data, channel);
+                            }
+
+                            // var rec = data.receiver;
+                            // channel.publish("from_" + sender, '', new Buffer(JSON.stringify(data)), {persistent: true});
+                        });
+
+
+
                         User.findOne({_id:data._id}, function (err, user) {
                             if(err) {
                                 console.log("Database Error, ", err);
@@ -167,13 +181,36 @@ module.exports.run = function (worker) {
                                 socket.user = user;
                                 // console.log(user);
 
-                                //Sending messages to receiver
-                                socket.on('sendmsg', function (data, res) {
-                                    console.log("Message got called");
-                                    var sender = data.sender;
-                                    var rec = data.receiver;
-                                    channel.publish("from_" + sender, '', new Buffer(JSON.stringify(data)), {persistent: true});
-                                });
+
+                                socket.on('set-client-id', function (data) {
+                                    console.log("set client id got called with id", data);
+                                    socket.client_id = data;
+                                    channel.assertQueue(socket.client_id, {durable: true});
+
+                                    channel.consume(socket.client_id, function(msg) {
+
+                                        hash = JSON.parse(msg.content.toString());
+                                        redis_api.read_log(hash, function(log) {
+
+                                            socket.emit('msg', log, function(err, data) {
+                                                if(err) {
+                                                    console.log("Did not recieve by client ", err);
+                                                }
+                                                else {
+                                                    console.log("Message is recieved by client");
+                                                    redis_api.delete_log(hash);
+                                                    channel.ack(msg);
+                                                }
+                                            })
+                                        })
+
+
+                                    }, {noAck: false});
+
+                                })
+
+                                
+
 
                                 socket.emit("auth-success", user);
                             }
