@@ -19,6 +19,7 @@ var escapeProperty = function (value) {
 var NoteSchema = new Schema({
     note_hash: {
         type: String,
+        unique: true,
         required: true,
         maxlength: [16, "Note_hash should be less than 16 characters"]
     },
@@ -32,7 +33,8 @@ var NoteSchema = new Schema({
         required: true,
         maxlength: [100, "process_name should be less than 100 characters"]
     },
-    client: {
+    clients: {
+        type: {}
     }
 });
 
