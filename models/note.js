@@ -33,10 +33,14 @@ var NoteSchema = new Schema({
         required: true,
         maxlength: [100, "process_name should be less than 100 characters"]
     },
-    clients: {
-        type: {}
+    note_text: {
+        type: String,
+        required: true,
+        maxlength: [10000, "note_text should be less than 10,000 chars"]
     }
 });
+
+
 
 module.exports = function (username) {
     return mongoose.model(username + "_notes", NoteSchema);

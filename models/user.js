@@ -63,14 +63,14 @@ var UserSchema = new Schema({
 
     name: {
         type: String,
-        required: true,
+        required: false,
         get: escapeProperty,
         maxlength: [80, "Name should be less 80 characters"]
     },
 
     email: {
         type: String,
-        required: true,
+        required: false,
         unique: true,
         // Regexp to validate emails with more strict rules
         match: [/^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/, 'Please enter a valid email'],

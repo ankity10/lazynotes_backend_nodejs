@@ -80,6 +80,8 @@ module.exports.run = function (worker) {
     // Morgan instance to log each request on terminal
     var morgan = require('morgan');
 
+    app.use(morgan('tiny'));
+
     app.use(serveStatic(path.resolve(__dirname, 'public')));
 
     httpServer.on('request', app);

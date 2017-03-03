@@ -83,7 +83,7 @@ var emailToken = function (email, username, token, route, callback) {
 var username_availability = function (req) {
     if (req.body.username == req.user.username || req.body.email == req.user.email) {
         return {
-            success: true,
+            success: 1,
             message: "Username is available"
         };
     }
@@ -98,21 +98,21 @@ var username_availability = function (req) {
             // if there is any error
             if (err) {
                 return {
-                    success: false,
+                    success: 0,
                     message: "Error while finding username!!"
                 };
             }
             // if user found then success false
             if (user) {
                 return {
-                    success: false,
+                    success: 0,
                     message: "Username Already exists!!"
                 };
             }
             // else username or email is available
             else {
                 return {
-                    success: true,
+                    success: 1,
                     message: "Username is available"
                 };
 
@@ -121,7 +121,7 @@ var username_availability = function (req) {
 
     } else {
         return {
-            success: false,
+            success: 0,
             message: "Field is empty!"
         };
     }
@@ -134,35 +134,50 @@ var username_availability = function (req) {
  * @return {[json]}                                  [Returns a json object]
  */
 apiRouter.post("/user/auth/signup", function (req, res) {
+    console.log(req.body);
     var user = new User(req.body);
-    console.log(user);
+    if(req.body.client) {
+        var client = req.body.client;
+        
+        console.log(client);
+        user.clients = [client];
+        console.log(user);
 
-    user.verificationToken = base64url(crypto.randomBytes(200));
-    user.verificationTokenExpires = Date.now() + 259200000 // 3 Days
-    user.save(function (err, user) {
-        // some error in saving the user then return
-        if (err) {
-            res.send(err);
-            return;
-        }
-        // sending verification email
-        emailToken(user.email, user.username, user.verificationToken, "/user/verify", function (err) {
+        user.verificationToken = base64url(crypto.randomBytes(200));
+        user.verificationTokenExpires = Date.now() + 259200000 // 3 Days
+        user.save(function (err, user) {
+            // some error in saving the user then return
             if (err) {
-                console.log("Error-log: Email not sent");
+                res.send(err);
+                return;
             }
-        });
-        // if no error then return json object with success message
-        var jwtuser = user.toJWTUser();
-        // console.log("user id : "+jwtuser);
-        var token = jwt.sign(jwtuser, config.secret, {
-            expiresIn: 100080 // one week
-        });
-        res.json({
-            success: true,
-            token: "JWT " + token
+            // sending verification email
+            emailToken(user.email, user.username, user.verificationToken, "/user/verify", function (err) {
+                if (err) {
+                    console.log("Error-log: Email not sent");
+                }
+            });
+            // if no error then return json object with success message
+            var jwtuser = user.toJWTUser();
+            // console.log("user id : "+jwtuser);
+            var token = jwt.sign(jwtuser, config.secret, {
+                expiresIn: 100080 // one week
+            });
+            res.json({
+                success: 1,
+                token: token
+            });
+
         });
 
-    });
+    }
+    else {
+        res.json({
+            success: 0,
+            message: "field 'client' for the post request /api" + req.url + " is required"
+        });
+    }
+    
 });
 
 /**
@@ -174,6 +189,7 @@ apiRouter.post("/user/auth/signup", function (req, res) {
 apiRouter.post("/user/auth/login", function (req, res) {
     var username = req.body.username;
     var password = req.body.password;
+    var client = req.body.client;
     // finding one user with username = 'username' or email = 'username' by using mongodb $or query
     User.findOne({$or: [{username: username}, {email: username}]}, function (err, user) {
         // if error in finding the user
@@ -183,7 +199,7 @@ apiRouter.post("/user/auth/login", function (req, res) {
         // if User not found
         if (!user) {
             res.json({
-                success: false,
+                success: 0,
                 message: "Authentication failed. User not found. "
             });
             // console.log(datetime);
@@ -194,17 +210,39 @@ apiRouter.post("/user/auth/login", function (req, res) {
             if (user.authenticate(password)) {
                 var jwtuser = user.toJWTUser();
                 console.log("jwt user : " + jwtuser);
+                
+                var is_new;
+                
                 var token = jwt.sign(jwtuser, config.secret, {
                     expiresIn: 100080 // one week
                 });
+
+                if(jwtuser.clients.indexOf(client) == -1) {
+                    is_new = 1;
+
+                    user.clients.push(client);
+                    user.save(function (err, user) {
+                        // some error in saving the user then return
+                        if (err) {
+                            res.send(err);
+                            return;
+                        }
+                        // sending verification email
+                    });
+                }
+                else {
+                    is_new = 0;
+                }
+                
                 res.json({
-                    success: true,
-                    token: token
+                    success: 1,
+                    token: token,
+                    is_new: is_new
                 });
             }
             else {
                 res.json({
-                    success: false,
+                    success: 0,
                     message: "Authentication failed. Password did not match. "
                 });
             }
@@ -284,14 +322,14 @@ apiRouter.route('/user/resetpassword')
             // if there is any error
             if (err) {
                 res.json({
-                    success: false,
+                    success: 0,
                     message: "Reset Password failed. Some unkown error occured"
                 });
             }
             // if no user found with that token
             if (!user) {
                 res.json({
-                    success: false,
+                    success: 0,
                     message: "Reset Password failed. Reset token expired or invalid"
                 });
             }
@@ -306,7 +344,7 @@ apiRouter.route('/user/resetpassword')
                     }
                     else {
                         res.json({
-                            success: true,
+                            success: 1,
                             message: "Password reset successful"
                         });
                     }
@@ -333,14 +371,14 @@ apiRouter.get('/user/verify', function (req, res) {
         // if there is any error
         if (err) {
             res.json({
-                success: false,
+                success: 0,
                 message: "Verification failed. Some unkown error occured"
             });
         }
         // if no user found with that token
         if (!user) {
             res.json({
-                success: false,
+                success: 0,
                 message: "Verification failed. Verification token expired or invalid"
             });
         }
@@ -357,7 +395,7 @@ apiRouter.get('/user/verify', function (req, res) {
                 }
                 else {
                     res.json({
-                        success: true,
+                        success: 1,
                         message: "Verification successful"
                     });
                 }
@@ -373,12 +411,12 @@ apiRouter.post('/user/password/change', function (req, res) {
     user.save(function (error) {
         if (error) {
             res.status(500).json({
-                success: false,
+                success: 0,
                 message: "Cannot update password"
             })
         }
         res.json({
-            success: true,
+            success: 1,
             message: "User password updated successfully"
         });
     })
@@ -397,12 +435,12 @@ apiRouter.route('/user/me')
         console.log(req.user);
         if (req.isAuthenticated()) {
             res.json({
-                success: true,
+                success: 1,
                 user: req.user.toJSON()
             })
         } else {
             res.json({
-                success: false,
+                success: 0,
                 user: null
             })
         }
@@ -418,19 +456,19 @@ apiRouter.route('/user/me')
                 newUser.save(function (error) {
                     if (error) {
                         res.status(500).json({
-                            success: false,
+                            success: 0,
                             message: "Cannot update user data"
                         })
                     }
                     res.json({
-                        success: true,
+                        success: 1,
                         data: newUser
                     })
                 })
             }
             else {
                 res.json({
-                    success: false,
+                    success: 0,
                     message: "Username or Email already registered"
                 })
             }
@@ -441,16 +479,83 @@ apiRouter.route('/user/me')
             newUser.save(function (error) {
                 if (error) {
                     res.status(500).json({
-                        success: false,
+                        success: 0,
                         message: "Cannot update user data"
                     })
                 }
                 res.json({
-                    success: true,
+                    success: 1,
                     data: newUser
                 })
             })
         }
     });
+
+
+
+apiRouter.get('/notes', passport.authenticate('jwt', {session: false}), function(req, res) {
+    // console.log(req.user);
+    var db = require('./models/note.js');
+    var Note = db(req.user.username);
+
+    Note.find({}, function(err, notes) {
+        if(err) {
+            res.send(err);
+            return;
+        }
+        else {
+            res.send({
+                notes: notes
+            })
+        }
+
+    });
+});
+
+
+apiRouter.get("/queue/count", passport.authenticate("jwt", {session: false}), function(req, res) {
+    console.log(req.user);
+    console.log(req.query);
+    var queue = req.query.queue;
+
+    if(queue) {
+        var request = require('request');
+        request.get(
+            'http://guest:guest@localhost:15672/api/queues/%2f/' + queue,
+            function (error, response, body) {
+                if (!error && response.statusCode == 200) {
+                    // console.log(body)
+                    res.json({
+                        success: 1,
+                        message_count: JSON.parse(body).backing_queue_status.len,
+                    });
+                }
+                else if(!error){
+                    delete response.request;
+                    res.json({
+                        success: 0,
+                        message: "Object not found on queuing server",
+                        server_response: response.body,
+                        status_code: response.statusCode
+                    });
+                }
+                else {
+                    res.json({
+                        success: 0,
+                        message: error
+                    })
+                }
+            }
+        );
+    }
+    else {
+        res.json({
+            success: 0,
+            message: "Require 'queue' as GET query parameter"
+
+        })
+    }
+});
+
 //=================================== user routes ends =======================================
 
