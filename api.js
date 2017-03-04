@@ -189,7 +189,7 @@ apiRouter.post("/user/auth/signup", function (req, res) {
 apiRouter.post("/user/auth/login", function (req, res) {
     var username = req.body.username;
     var password = req.body.password;
-    var client = req.body.client;
+    var client = req.body.client_id;
     // finding one user with username = 'username' or email = 'username' by using mongodb $or query
     User.findOne({$or: [{username: username}, {email: username}]}, function (err, user) {
         // if error in finding the user

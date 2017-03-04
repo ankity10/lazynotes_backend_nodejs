@@ -9,7 +9,7 @@ var User = require('./models/user');
 
 var redis_api = require('./redis_module');
 
-var utils = require('./utils');
+var utils = require('./utils_updated');
 
 // Creating instance of config module
 var config = require('./config/config');
@@ -152,16 +152,14 @@ module.exports.run = function (worker) {
                                     //Sending messages to receiver
 
                                     socket.on('sendmsg', function (data) {
+                                        var log = JSON.parse(data);
                                         console.log("Message got called");
-                                        var resolve_flag = data.resolve_flag;
+                                        
                                         console.log("log data", data);
 
-                                        if(resolve_flag) {
-                                            utils.resolve_merge_conflict(socket.user, data.from_client_id, data, channel);
-                                        }
-                                        else {
-                                            utils.insert_note(socket.user, data.from_client_id, data, channel);
-                                        }
+                                            
+                                            utils.insert_note(socket.user, log.from_client_id, log, channel);
+                                       
 
                                         // var rec = data.receiver;
                                         // channel.publish("from_" + sender, '', new Buffer(JSON.stringify(data)), {persistent: true});

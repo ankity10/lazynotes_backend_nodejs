@@ -21,7 +21,7 @@ var NoteSchema = new Schema({
         type: String,
         unique: true,
         required: true,
-        maxlength: [16, "Note_hash should be less than 16 characters"]
+        maxlength: [64, "Note_hash should be less than 16 characters"]
     },
     window_title: {
         type: String,
