@@ -38,9 +38,9 @@ module.exports =
                         var q = username + ":" + to_clients[i];
                         channel.assertQueue(q, {durable: true});
                         channel.sendToQueue(q, new Buffer(key_hash), {persistent: true});
-                        var d = {};
-                        d[from_client_id] = log['note_text'];
-                        new_obj["clients"] = JSON.stringify(d);
+                        // var d = {};
+                        // d[from_client_id] = log['note_text'];
+                        new_obj["note_text"] = log['note_text'];
                         console.log("log not in redis ", new_obj);
                         console.log("key hash before inserting not present", key_hash);
                         var h = username + ":" + log['note_hash'] + ":" + to_clients[i];
@@ -50,9 +50,11 @@ module.exports =
                     {
                         var result;
                         redis_api.read_log(key_hash, function (result) {
-                            var val = {};
-                            val[from_client_id] = log['note_text'];
-                            new_obj["clients"] = JSON.stringify(val);
+                            // var val = {};
+                            // val[from_client_id] = log['note_text'];
+                            // new_obj["clients"] = JSON.stringify(val);
+                            new_obj["note_text"] = log['note_text'];
+                            
                             console.log("log present in redis ", new_obj);
                             console.log("key hash before inserting  present", key_hash);
 
