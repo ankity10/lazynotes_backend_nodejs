@@ -49,6 +49,11 @@ var async = require('async');
 // lodash - utility functions
 const utility = require('lodash');
 
+
+
+// rabbit utility to create queues
+var rabbit = require('./rabbit_util');
+
 /**
  * @param  {String}
  * @return {[type]}
@@ -136,6 +141,7 @@ var username_availability = function (req) {
 apiRouter.post("/user/auth/signup", function (req, res) {
     console.log(req.body);
     var user = new User(req.body);
+
     if(req.body.client) {
         var client = req.body.client;
         
@@ -163,10 +169,16 @@ apiRouter.post("/user/auth/signup", function (req, res) {
             var token = jwt.sign(jwtuser, config.secret, {
                 expiresIn: 100080 // one week
             });
-            res.json({
-                success: 1,
-                token: token
-            });
+            var queue_name = user.username + ":" +req.body.client;
+
+            rabbit.create_queue(queue_name, function () {
+                // sending response after craeting queue
+                res.json({
+                    success: 1,
+                    token: token
+                });
+            })
+            
 
         });
 
@@ -190,65 +202,80 @@ apiRouter.post("/user/auth/login", function (req, res) {
     var username = req.body.username;
     var password = req.body.password;
     var client = req.body.client_id;
-    // finding one user with username = 'username' or email = 'username' by using mongodb $or query
-    User.findOne({$or: [{username: username}, {email: username}]}, function (err, user) {
-        // if error in finding the user
-        if (err) {
-            res.send(err);
-        }
-        // if User not found
-        if (!user) {
-            res.json({
-                success: 0,
-                message: "Authentication failed. User not found. "
-            });
-            // console.log(datetime);
-        }
-        // if a user found with that username
-        else {
-            // if password matches
-            if (user.authenticate(password)) {
-                var jwtuser = user.toJWTUser();
-                console.log("jwt user : " + jwtuser);
-                
-                var is_new;
-                
-                var token = jwt.sign(jwtuser, config.secret, {
-                    expiresIn: 100080 // one week
-                });
 
-                if(jwtuser.clients.indexOf(client) == -1) {
-                    is_new = 1;
-
-                    user.clients.push(client);
-                    user.save(function (err, user) {
-                        // some error in saving the user then return
-                        if (err) {
-                            res.send(err);
-                            return;
-                        }
-                        // sending verification email
-                    });
-                }
-                else {
-                    is_new = 0;
-                }
-                
-                res.json({
-                    success: 1,
-                    token: token,
-                    is_new: is_new
-                });
+    if(client) {
+         // finding one user with username = 'username' or email = 'username' by using mongodb $or query
+        User.findOne({$or: [{username: username}, {email: username}]}, function (err, user) {
+            // if error in finding the user
+            if (err) {
+                res.send(err);
             }
-            else {
+            // if User not found
+            if (!user) {
                 res.json({
                     success: 0,
-                    message: "Authentication failed. Password did not match. "
+                    message: "Authentication failed. User not found. "
                 });
+                // console.log(datetime);
             }
-        }
+            // if a user found with that username
+            else {
+                // if password matches
+                if (user.authenticate(password)) {
+                    var jwtuser = user.toJWTUser();
+                    console.log("jwt user : " + jwtuser);
+                    
+                    var is_new;
+                    
+                    var token = jwt.sign(jwtuser, config.secret, {
+                        expiresIn: 100080 // one week
+                    });
 
-    });
+                    if(jwtuser.clients.indexOf(client) == -1) {
+                        is_new = 1;
+
+                        user.clients.push(client);
+                        user.save(function (err, user) {
+                            // some error in saving the user then return
+                            if (err) {
+                                res.send(err);
+                                return;
+                            }
+                            // sending verification email
+                        });
+                    }
+                    else {
+                        is_new = 0;
+                    }
+
+                    var queue_name = user.username + ":" +client;
+
+                    rabbit.create_queue(queue_name, function () {
+                        // sending response after craeting queue
+                        res.json({
+                            success: 1,
+                            token: token,
+                            is_new: is_new
+                        });
+                    })
+                    
+                   
+                }
+                else {
+                    res.json({
+                        success: 0,
+                        message: "Authentication failed. Password did not match. "
+                    });
+                }
+            }
+        });
+    }
+    else {
+         res.json({
+            success: 0,
+            message: "field 'client' for the post request /api" + req.url + " is required"
+        });
+    }
 });
 
 apiRouter.route('/user/resetpassword')
