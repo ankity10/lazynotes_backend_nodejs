@@ -41,7 +41,6 @@ var NoteSchema = new Schema({
 });
 
 
-
 module.exports = function (username) {
     return mongoose.model(username + "_notes", NoteSchema);
 }

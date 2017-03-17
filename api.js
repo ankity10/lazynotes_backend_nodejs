@@ -50,7 +50,6 @@ var async = require('async');
 const utility = require('lodash');
 
 
-
 // rabbit utility to create queues
 var rabbit = require('./rabbit_util');
 
@@ -142,9 +141,9 @@ apiRouter.post("/user/auth/signup", function (req, res) {
     console.log(req.body);
     var user = new User(req.body);
 
-    if(req.body.client) {
+    if (req.body.client) {
         var client = req.body.client;
-        
+
         console.log(client);
         user.clients = [client];
         console.log(user);
@@ -169,7 +168,7 @@ apiRouter.post("/user/auth/signup", function (req, res) {
             var token = jwt.sign(jwtuser, config.secret, {
                 expiresIn: 100080 // one week
             });
-            var queue_name = user.username + ":" +req.body.client;
+            var queue_name = user.username + ":" + req.body.client;
 
             rabbit.create_queue(queue_name, function () {
                 // sending response after craeting queue
@@ -178,7 +177,7 @@ apiRouter.post("/user/auth/signup", function (req, res) {
                     token: token
                 });
             })
-            
+
 
         });
 
@@ -189,7 +188,7 @@ apiRouter.post("/user/auth/signup", function (req, res) {
             message: "field 'client' for the post request /api" + req.url + " is required"
         });
     }
-    
+
 });
 
 /**
@@ -203,8 +202,8 @@ apiRouter.post("/user/auth/login", function (req, res) {
     var password = req.body.password;
     var client = req.body.client_id;
 
-    if(client) {
-         // finding one user with username = 'username' or email = 'username' by using mongodb $or query
+    if (client) {
+        // finding one user with username = 'username' or email = 'username' by using mongodb $or query
         User.findOne({$or: [{username: username}, {email: username}]}, function (err, user) {
             // if error in finding the user
             if (err) {
@@ -224,14 +223,14 @@ apiRouter.post("/user/auth/login", function (req, res) {
                 if (user.authenticate(password)) {
                     var jwtuser = user.toJWTUser();
                     console.log("jwt user : " + jwtuser);
-                    
+
                     var is_new;
-                    
+
                     var token = jwt.sign(jwtuser, config.secret, {
                         expiresIn: 100080 // one week
                     });
 
-                    if(jwtuser.clients.indexOf(client) == -1) {
+                    if (jwtuser.clients.indexOf(client) == -1) {
                         is_new = 1;
 
                         user.clients.push(client);
@@ -248,7 +247,7 @@ apiRouter.post("/user/auth/login", function (req, res) {
                         is_new = 0;
                     }
 
-                    var queue_name = user.username + ":" +client;
+                    var queue_name = user.username + ":" + client;
 
                     rabbit.create_queue(queue_name, function () {
                         // sending response after craeting queue
@@ -258,8 +257,8 @@ apiRouter.post("/user/auth/login", function (req, res) {
                             is_new: is_new
                         });
                     })
-                    
-                   
+
+
                 }
                 else {
                     res.json({
@@ -271,7 +270,7 @@ apiRouter.post("/user/auth/login", function (req, res) {
         });
     }
     else {
-         res.json({
+        res.json({
             success: 0,
             message: "field 'client' for the post request /api" + req.url + " is required"
         });
@@ -519,14 +518,13 @@ apiRouter.route('/user/me')
     });
 
 
-
-apiRouter.get('/notes', passport.authenticate('jwt', {session: false}), function(req, res) {
+apiRouter.get('/notes', passport.authenticate('jwt', {session: false}), function (req, res) {
     // console.log(req.user);
     var db = require('./models/note.js');
     var Note = db(req.user.username);
 
-    Note.find({}, function(err, notes) {
-        if(err) {
+    Note.find({}, function (err, notes) {
+        if (err) {
             res.send(err);
             return;
         }
@@ -540,12 +538,12 @@ apiRouter.get('/notes', passport.authenticate('jwt', {session: false}), function
 });
 
 
-apiRouter.get("/queue/count", passport.authenticate("jwt", {session: false}), function(req, res) {
+apiRouter.get("/queue/count", passport.authenticate("jwt", {session: false}), function (req, res) {
     console.log(req.user);
     console.log(req.query);
     var queue = req.query.queue;
 
-    if(queue) {
+    if (queue) {
         var request = require('request');
         request.get(
             'http://guest:guest@localhost:15672/api/queues/%2f/' + queue,
@@ -557,7 +555,7 @@ apiRouter.get("/queue/count", passport.authenticate("jwt", {session: false}), fu
                         message_count: JSON.parse(body).backing_queue_status.len,
                     });
                 }
-                else if(!error){
+                else if (!error) {
                     delete response.request;
                     res.json({
                         success: 0,

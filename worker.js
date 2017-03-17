@@ -19,44 +19,21 @@ module.exports.run = function (worker) {
     console.log('   >> Worker PID:', process.pid);
     var scServer = worker.scServer;
 
-    scServer.addMiddleware(scServer.MIDDLEWARE_PUBLISH_IN, function (req, next) {
-
-
-        if (2 == 21) {
-            next();
-        } else {
-            console.log("in in else")
-            next('You are not authorized to publish to ');
-        }
-    });
-
-    scServer.addMiddleware(scServer.MIDDLEWARE_PUBLISH_OUT, function (req, next) {
-
-
-        if (2 == 21) {
-            next();
-        } else {
-            console.log("in out else");
-            next('You are not authorized to publish to ');
-        }
-    });
-
     scServer.addMiddleware(scServer.MIDDLEWARE_EMIT, function (req, next) {
-
         if (req.event == 'sendmsg') {
-            try{
+            try {
                 var signedAuthToken = req.socket.signedAuthToken;
             }
-            catch(err) {
-                console.log("Authenticated is pending ",err);
+            catch (err) {
+                console.log("Authenticated is pending ", err);
             }
             verify_jwt(signedAuthToken, config.secret, "", function (err, data) {
-                if(err) {
-                    console.error("error in jwt verification ",err);
+                if (err) {
+                    console.error("error in jwt verification ", err);
                     // next("Error in authentication ", err);
                     // req.socket.disconnect(err);
                 }
-                else if(data) {
+                else if (data) {
                     console.log("Successfully verified");
                     console.log(req.socket.user);
                     next();
@@ -98,7 +75,6 @@ module.exports.run = function (worker) {
     app.use(rootRouter);
     // http handler finished
 
-
     /*
      In here we handle our incoming realtime connections and listen for events.
      */
@@ -108,9 +84,6 @@ module.exports.run = function (worker) {
         // create rabbitmq channel (virtual connection)
         rabbit.connection.createChannel(function (err, channel) {
 
-
-
-
             socket.on('auth', function (data) {
                 var signedtoken = data;
                 console.log("Authenticate called");
@@ -118,17 +91,17 @@ module.exports.run = function (worker) {
                 // socket.setAuthToken(data);
                 // console.log(socket.authKey);
                 verify_jwt(signedtoken, config.secret, "", function (err, data) {
-                    if(err) {
-                        console.error("error in jwt verification ",err);
+                    if (err) {
+                        console.error("error in jwt verification ", err);
                     }
-                    else if(data) {
+                    else if (data) {
                         console.log("Successfully verified");
                         socket.signedAuthToken = signedtoken;
                         socket.authToken = data;
                         // console.log(data);
 
-                        User.findOne({_id:data._id}, function (err, user) {
-                            if(err) {
+                        User.findOne({_id: data._id}, function (err, user) {
+                            if (err) {
                                 console.log("Database Error, ", err);
                             }
                             else if (user) {
@@ -136,43 +109,28 @@ module.exports.run = function (worker) {
                                 socket.user = user;
                                 // console.log(user);
 
-
-
-
-
-
-
                                 socket.on('set-client-id', function (data) {
                                     console.log("set client id got called with id", data);
                                     socket.client_id = data;
                                     queue_name = socket.user.username + ":" + socket.client_id;
                                     channel.assertQueue(queue_name, {durable: true});
 
-
-                                    //Sending messages to receiver
-
                                     socket.on('sendmsg', function (data) {
                                         var log = JSON.parse(data);
                                         console.log("Message got called");
-                                        
                                         console.log("log data", data);
-
-                                            
-                                            utils.insert_note(socket.user, log.from_client_id, log, channel);
-                                       
-
+                                        utils.insert_note(socket.user, log.from_client_id, log, channel);
                                         // var rec = data.receiver;
                                         // channel.publish("from_" + sender, '', new Buffer(JSON.stringify(data)), {persistent: true});
                                     });
 
-
-                                    channel.consume(queue_name, function(msg) {
+                                    channel.consume(queue_name, function (msg) {
                                         console.log(msg);
                                         hash = msg.content.toString();
-                                        redis_api.read_log(hash, function(log) {
+                                        redis_api.read_log(hash, function (log) {
 
-                                            socket.emit('msg', log, function(err, data) {
-                                                if(err) {
+                                            socket.emit('msg', log, function (err, data) {
+                                                if (err) {
                                                     console.log("Did not recieve by client ", err);
                                                 }
                                                 else {
@@ -182,15 +140,8 @@ module.exports.run = function (worker) {
                                                 }
                                             })
                                         })
-
-
                                     }, {noAck: false});
-
                                 });
-
-                                
-
-
                                 socket.emit("auth-success", user);
                             }
                             else {
@@ -201,17 +152,12 @@ module.exports.run = function (worker) {
                     }
                 });
                 console.log(socket.authState);
-
             })
 
             socket.on('disconnect', function () {
                 console.log("client disconnected")
                 channel.close();
             })
-
-
         });
-
-
     });
 };

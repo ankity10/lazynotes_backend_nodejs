@@ -7,7 +7,7 @@ module.exports =
     {
         insert_note: function (user, from_client_id, log, channel) {
             username = user.username;
-            console.log("===================",log);
+            console.log("===================", log);
             console.log(Type(log));
 
 
@@ -16,18 +16,17 @@ module.exports =
             var index = to_clients.indexOf(from_client_id);
             if (index > -1)
                 to_clients.splice(index, 1);
+
             console.log("clients list", to_clients);
 
             var new_obj = {
                 "note_hash": log['note_hash'],
                 "window_title": log['window_title'],
                 "process_name": log['process_name'],
-                
+
             };
             //Create entry in RabbitMq and updating Redis
-            for (var i = 0; i < to_clients.length; i++) (function(i)
-
-            {
+            for (var i = 0; i < to_clients.length; i++) (function (i) {
                 // var to_client_id = to_clients[i];
                 var key_hash = username + ":" + log['note_hash'] + ":" + to_clients[i];
                 console.log("Key_hash = " + key_hash);
@@ -54,7 +53,7 @@ module.exports =
                             // val[from_client_id] = log['note_text'];
                             // new_obj["clients"] = JSON.stringify(val);
                             new_obj["note_text"] = log['note_text'];
-                            
+
                             console.log("log present in redis ", new_obj);
                             console.log("key hash before inserting  present", key_hash);
 
