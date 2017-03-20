@@ -16,6 +16,7 @@ var jwt = require('jsonwebtoken');
 // Mongoose ODM to manipulate mongodb.
 var mongoose = require('mongoose');
 
+mongoose.Promise = global.Promise;
 // Connecting to database using preconfigured path in 'config/config.js' (config.db)
 mongoose.connect(config.db);
 
@@ -52,6 +53,30 @@ const utility = require('lodash');
 
 // rabbit utility to create queues
 var rabbit = require('./rabbit_util');
+
+//
+var winston = require("winston");
+
+winston.loggers.add('colored', {
+    console: {
+        level: 'info',
+        colorize: true,
+        label: 'api.js'
+    },
+    file: {
+        level: "debug",
+        filename: 'logs/log.txt'
+    }
+});
+
+var log = winston.loggers.get('colored');
+
+log.info('Info logs');
+log.warn("warning logs");
+log.error("error logs");
+log.silly("silly logs");
+log.warn("debug logs");
+
 
 /**
  * @param  {String}
@@ -137,55 +162,82 @@ var username_availability = function (req) {
  * @param  {[response object]} res                   [By default provided by express application]
  * @return {[json]}                                  [Returns a json object]
  */
-apiRouter.post("/user/auth/signup", function (req, res) {
-    console.log(req.body);
+apiRouter.post("/auth/signup", function (req, res) {
     var user = new User(req.body);
+    log.warn("[ /auth/signup ] Requested, post params: ", req.body);
 
-    if (req.body.client) {
-        var client = req.body.client;
-
-        console.log(client);
-        user.clients = [client];
-        console.log(user);
+    if (req.body.client_id) {
+        log.warn("[ /auth/signup ] /auth/signup", {client_id: req.body.client_id});
+        var client_id = req.body.client_id;
+        user.clients = [];
+        user.clients.push(client_id);
 
         user.verificationToken = base64url(crypto.randomBytes(200));
         user.verificationTokenExpires = Date.now() + 259200000 // 3 Days
         user.save(function (err, user) {
             // some error in saving the user then return
             if (err) {
-                res.send(err);
+                log.error("[ /auth/signup ] Error is saving user", {user: user});
+                res.json({
+                    message: err,
+                    success: 0
+                });
                 return;
             }
             // sending verification email
-            emailToken(user.email, user.username, user.verificationToken, "/user/verify", function (err) {
-                if (err) {
-                    console.log("Error-log: Email not sent");
-                }
-            });
+            // emailToken(user.email, user.username, user.verificationToken, "/user/verify", function (err) {
+            //     if (err) {
+            //         console.log("Error-log: Email not sent");
+            //     }
+            // });
             // if no error then return json object with success message
             var jwtuser = user.toJWTUser();
-            // console.log("user id : "+jwtuser);
+
+            var is_new;
+
             var token = jwt.sign(jwtuser, config.secret, {
                 expiresIn: 100080 // one week
             });
-            var queue_name = user.username + ":" + req.body.client;
+
+            if (jwtuser.clients.indexOf(client_id) == -1) {
+                is_new = 1;
+                log.warn("[ /auth/signup ] Client with client id: ", client_id, " is new");
+
+
+                user.save(function (err, user) {
+                    // some error in saving the user then return
+                    if (err) {
+                        res.send(err);
+                        log.info("[ /auth/signup ] Error saving user information");
+                        return;
+                    }
+                });
+            }
+            else {
+                is_new = 0;
+                log.warn("[ /auth/signup ] Client with client id: ", client_id, " is old");
+
+            }
+
+            var queue_name = user.username + ":" + client_id;
 
             rabbit.create_queue(queue_name, function () {
                 // sending response after craeting queue
+                log.info("[ /auth/signup ] Queue created successfully with name ", queue_name);
+                log.info("[ /auth/signup ] User signup successful");
                 res.json({
                     success: 1,
-                    token: token
+                    token: token,
+                    is_new: is_new
                 });
             })
-
-
         });
-
     }
     else {
+        log.error("[ /auth/signup ] signup failed: No 'cliend_id' is provided in post params", {post_params: req.body});
         res.json({
             success: 0,
-            message: "field 'client' for the post request /api" + req.url + " is required"
+            message: "field 'client_id' for the post request /api" + req.url + " is required"
         });
     }
 
@@ -197,20 +249,24 @@ apiRouter.post("/user/auth/signup", function (req, res) {
  * @param  {[response object]} res                   [By default provided by express application]
  * @return {[Json]}                                  [Return a json object with keys "success" and "messaage"]
  */
-apiRouter.post("/user/auth/login", function (req, res) {
+apiRouter.post("/auth/login", function (req, res) {
     var username = req.body.username;
     var password = req.body.password;
-    var client = req.body.client_id;
+    var client_id = req.body.client_id;
 
-    if (client) {
+    log.warn("[ /auth/login ] requested, post params", req.body);
+
+    if (client_id) {
         // finding one user with username = 'username' or email = 'username' by using mongodb $or query
         User.findOne({$or: [{username: username}, {email: username}]}, function (err, user) {
             // if error in finding the user
             if (err) {
+                log.error("[ /auth/login ] Error saving user", {err: err});
                 res.send(err);
             }
             // if User not found
             if (!user) {
+                log.error("[ /auth/login ] Authentication failed User not found", {post_params: req.body});
                 res.json({
                     success: 0,
                     message: "Authentication failed. User not found. "
@@ -221,8 +277,8 @@ apiRouter.post("/user/auth/login", function (req, res) {
             else {
                 // if password matches
                 if (user.authenticate(password)) {
+                    log.info("[ /auth/login ] Authentication successful");
                     var jwtuser = user.toJWTUser();
-                    console.log("jwt user : " + jwtuser);
 
                     var is_new;
 
@@ -230,26 +286,32 @@ apiRouter.post("/user/auth/login", function (req, res) {
                         expiresIn: 100080 // one week
                     });
 
-                    if (jwtuser.clients.indexOf(client) == -1) {
+                    if (jwtuser.clients.indexOf(client_id) == -1) {
+                        log.warn("[ /auth/login ] Client with client id: ", client_id, " is new");
                         is_new = 1;
 
-                        user.clients.push(client);
+                        user.clients.push(client_id);
                         user.save(function (err, user) {
                             // some error in saving the user then return
                             if (err) {
+                                log.error("[ auth/login ] Error in saving the user ", err);
                                 res.send(err);
                                 return;
                             }
-                            // sending verification email
                         });
                     }
                     else {
                         is_new = 0;
+                        log.warn("[ /auth/login ] Client with client id: ", client_id, " is old");
                     }
 
-                    var queue_name = user.username + ":" + client;
+                    var queue_name = user.username + ":" + client_id;
 
                     rabbit.create_queue(queue_name, function () {
+
+                        log.info("[ /auth/login ] Queue created successfully with name ", queue_name);
+                        log.info("[ /auth/login ] User Logged in successfully");
+
                         // sending response after craeting queue
                         res.json({
                             success: 1,
@@ -257,10 +319,9 @@ apiRouter.post("/user/auth/login", function (req, res) {
                             is_new: is_new
                         });
                     })
-
-
                 }
                 else {
+                    log.error("[ /auth/login ] Authentication failed: wrong password");
                     res.json({
                         success: 0,
                         message: "Authentication failed. Password did not match. "
@@ -270,12 +331,92 @@ apiRouter.post("/user/auth/login", function (req, res) {
         });
     }
     else {
+        log.error("[ /auth/login ] login failed: No 'cliend_id' is provided in post params", {post_params: req.body});
         res.json({
             success: 0,
-            message: "field 'client' for the post request /api" + req.url + " is required"
+            message: "field 'client_id' for the post request /api" + req.url + " is required"
         });
     }
 });
+
+apiRouter.get('/notes', passport.authenticate('jwt', {session: false}), function (req, res) {
+    log.warn("[ /notes ] requested, User: ", req.user.username);
+    var db = require('./models/note.js');
+    var Note = db(req.user.username);
+
+    Note.find({}, function (err, notes) {
+        if (err) {
+            log.error("[ /notes ] Notes.find() failed: username=", req.user.username);
+            res.send({
+                message: err,
+                success: 0
+            });
+            return;
+        }
+        else {
+            log.info("[ /notes ] Notes fetched from database successfully");
+            res.send({
+                success: 1,
+                notes: notes
+            })
+        }
+
+    });
+});
+
+apiRouter.get("/rabbitmq/queue/message/count", passport.authenticate("jwt", {session: false}), function (req, res) {
+    // console.log(req.user);
+    // console.log(req.query);
+    log.warn("[ /rabbitmq/queue/message/count ] requested, Username: ",
+        req.user.username, "params => {queue:", req.query.queue, "}");
+    var queue = req.query.queue;
+
+    if (queue) {
+        var request = require('request');
+        request.get(
+            'http://guest:guest@localhost:15672/api/queues/%2f/' + queue,
+            function (error, response, body) {
+                if (!error && response.statusCode == 200) {
+                    // console.log(body)
+                    log.info("[ /rabbitmq/queue/message/count ] Message count fetched successfully from rabbitmq server " + JSON.parse(body).backing_queue_status);
+                    res.json({
+                        success: 1,
+                        message_count: JSON.parse(body).backing_queue_status.len,
+                    });
+                }
+                else if (!error) {
+                    log.error("[ /rabbitmq/queue/message/count ] Error: Queue not found in rabbitmq server");
+                    log.warn("[ /rabbitmq/queue/message/count ] Response from rabbit sever: ", response.body);
+                    delete response.request;
+                    res.json({
+                        success: 0,
+                        message: "Object not found on queuing server",
+                        server_response: response.body,
+                        status_code: response.statusCode
+                    });
+                }
+                else {
+                    log.error("[ /rabbitmq/queue/message/count ] Error: ", error);
+                    log.warn("[ /rabbitmq/queue/message/count ] Response from rabbit sever: ", response.body);
+
+                    res.json({
+                        success: 0,
+                        message: error
+                    })
+                }
+            }
+        );
+    }
+    else {
+        log.error("[ /rabbitmq/queue/message/count ] Require 'queue' as GET query parameter");
+        res.json({
+            success: 0,
+            message: "Require 'queue' as GET query parameter"
+
+        })
+    }
+});
+
 
 apiRouter.route('/user/resetpassword')
 // generate a reset token and send an email
@@ -385,6 +526,7 @@ apiRouter.route('/user/resetpassword')
  * @param  {[response object]} res                   [By default provided by express application]
  * @return {[Json]}
  */
+
 apiRouter.get('/user/verify', function (req, res) {
     // find one user with queried username and token
     User.findOne({
@@ -454,7 +596,7 @@ apiRouter.post('/user/availability', function (req, res) {
     res.json(username_availability(req));
 });
 
-// parameter required is 
+// parameter required is
 apiRouter.route('/user/me')
 // This route will be used by angular to check if a user is logged in
     .get(passport.authenticate('jwt', {session: false}), function (req, res) {
@@ -517,70 +659,6 @@ apiRouter.route('/user/me')
         }
     });
 
-
-apiRouter.get('/notes', passport.authenticate('jwt', {session: false}), function (req, res) {
-    // console.log(req.user);
-    var db = require('./models/note.js');
-    var Note = db(req.user.username);
-
-    Note.find({}, function (err, notes) {
-        if (err) {
-            res.send(err);
-            return;
-        }
-        else {
-            res.send({
-                notes: notes
-            })
-        }
-
-    });
-});
-
-
-apiRouter.get("/queue/count", passport.authenticate("jwt", {session: false}), function (req, res) {
-    console.log(req.user);
-    console.log(req.query);
-    var queue = req.query.queue;
-
-    if (queue) {
-        var request = require('request');
-        request.get(
-            'http://guest:guest@localhost:15672/api/queues/%2f/' + queue,
-            function (error, response, body) {
-                if (!error && response.statusCode == 200) {
-                    // console.log(body)
-                    res.json({
-                        success: 1,
-                        message_count: JSON.parse(body).backing_queue_status.len,
-                    });
-                }
-                else if (!error) {
-                    delete response.request;
-                    res.json({
-                        success: 0,
-                        message: "Object not found on queuing server",
-                        server_response: response.body,
-                        status_code: response.statusCode
-                    });
-                }
-                else {
-                    res.json({
-                        success: 0,
-                        message: error
-                    })
-                }
-            }
-        );
-    }
-    else {
-        res.json({
-            success: 0,
-            message: "Require 'queue' as GET query parameter"
-
-        })
-    }
-});
 
 //=================================== user routes ends =======================================
 

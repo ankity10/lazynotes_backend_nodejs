@@ -1,4 +1,4 @@
-var api = require('./redis_module.js');
+var api = require('./redis.js');
 
 var result;
 api.is_log_present('name', function(result)

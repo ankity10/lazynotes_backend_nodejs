@@ -7,12 +7,41 @@ var verify_jwt = require('./utils/verify_jwt');
 // User model to manipulate data in mongodb
 var User = require('./models/user');
 
-var redis_api = require('./redis_module');
+var redis_api = require('./redis');
 
-var utils = require('./utils_updated');
+var utils = require('./utils');
 
 // Creating instance of config module
 var config = require('./config/config');
+
+var winston = require("winston");
+
+winston.loggers.add('worker', {
+    console: {
+        level: 'info',
+        colorize: true,
+        label: 'worker.js'
+    },
+    file: {
+        level: "debug",
+        filename: 'logs/log.txt'
+    }
+});
+
+var log = winston.loggers.get('worker');
+
+// log.info('Info logs');
+// log.warn("warning logs");
+// log.error("error logs");
+// log.silly("silly logs");
+// log.warn("debug logs");
+
+
+var recieve = config.socketcluster_listners.receive;
+var send = config.socketcluster_listners.send;
+var authentication = config.socketcluster_listners.authentication;
+var disconnect = config.socketcluster_listners.disconnect;
+var set_client_id = config.socketcluster_listners.set_client_id;
 
 module.exports.run = function (worker) {
 
@@ -20,28 +49,36 @@ module.exports.run = function (worker) {
     var scServer = worker.scServer;
 
     scServer.addMiddleware(scServer.MIDDLEWARE_EMIT, function (req, next) {
-        if (req.event == 'sendmsg') {
-            try {
-                var signedAuthToken = req.socket.signedAuthToken;
-            }
-            catch (err) {
-                console.log("Authenticated is pending ", err);
-            }
-            verify_jwt(signedAuthToken, config.secret, "", function (err, data) {
-                if (err) {
-                    console.error("error in jwt verification ", err);
-                    // next("Error in authentication ", err);
-                    // req.socket.disconnect(err);
-                }
-                else if (data) {
-                    console.log("Successfully verified");
-                    console.log(req.socket.user);
-                    next();
-                }
-            });
+
+        if (config.socketcluster_listners_list.indexOf(req.event) == -1) {
+            log.error("[ middleware_emit ] ", req.event, " is not a valid listener, it is not defined on server");
         }
         else {
-            next();
+            if (req.event == recieve) {
+                try {
+                    var signedAuthToken = req.socket.signedAuthToken;
+                }
+                catch (err) {
+                    log.error("[ middleware_emit ] Error: No token found on socket object, disconnecting");
+                    req.socket.disconnect();
+                }
+                verify_jwt(signedAuthToken, config.secret, "", function (err, data) {
+                    if (err) {
+                        log.error("[ middleware_emit ] Verification Failed: Invalid token");
+                        next("[ middleware_emit ] Error in authentication ", err);
+                        req.socket.disconnect(err);
+                    }
+                    else if (data) {
+                        log.info("[ middleware_emit ] Authentication successful");
+                        next();
+                    }
+                });
+
+
+            }
+            else {
+                next();
+            }
         }
     });
 
@@ -57,7 +94,7 @@ module.exports.run = function (worker) {
     // Morgan instance to log each request on terminal
     var morgan = require('morgan');
 
-    app.use(morgan('tiny'));
+    // app.use(morgan('dev'));
 
     app.use(serveStatic(path.resolve(__dirname, 'public')));
 
@@ -79,64 +116,66 @@ module.exports.run = function (worker) {
      In here we handle our incoming realtime connections and listen for events.
      */
     scServer.on('connection', function (socket) {
-        console.log("User Connected ");
 
+        log.info("[ on connection ] On connection got called");
         // create rabbitmq channel (virtual connection)
         rabbit.connection.createChannel(function (err, channel) {
-
-            socket.on('auth', function (data) {
+            log.info("[ createchannel ] Rabbitmq channel created successfully");
+            socket.on(authentication, function (data) {
+                log.info("[ on ", authentication, " ] ", " got called");
+                log.warn("[ on ", authentication, " ] ", "Token: ", data);
                 var signedtoken = data;
-                console.log("Authenticate called");
-                console.log(socket.authState);
-                // socket.setAuthToken(data);
-                // console.log(socket.authKey);
+
                 verify_jwt(signedtoken, config.secret, "", function (err, data) {
                     if (err) {
-                        console.error("error in jwt verification ", err);
+                        log.error("[ on ", authentication, " ] ", "Authentication failed: ", err);
                     }
                     else if (data) {
-                        console.log("Successfully verified");
+                        log.info("[on ", authentication, " ] ", "Authentication successful");
                         socket.signedAuthToken = signedtoken;
                         socket.authToken = data;
-                        // console.log(data);
+
 
                         User.findOne({_id: data._id}, function (err, user) {
                             if (err) {
-                                console.log("Database Error, ", err);
+                                log.error("[ on ", authentication, " ] ", "Database Error: ", err);
                             }
                             else if (user) {
-                                // user = user.toJWTUser()
+                                log.info("[ on ", authentication, " ] ", "User found in database");
                                 socket.user = user;
-                                // console.log(user);
 
-                                socket.on('set-client-id', function (data) {
-                                    console.log("set client id got called with id", data);
+
+                                socket.on(set_client_id, function (data) {
+                                    log.info("[ on ",set_client_id," ] ","set-client-id got called with client-id:", data);
                                     socket.client_id = data;
                                     queue_name = socket.user.username + ":" + socket.client_id;
                                     channel.assertQueue(queue_name, {durable: true});
+                                    log.warn("[ on ",set_client_id," ] ","Queue created successfully with name: ", queue_name);
 
-                                    socket.on('sendmsg', function (data) {
-                                        var log = JSON.parse(data);
-                                        console.log("Message got called");
-                                        console.log("log data", data);
-                                        utils.insert_note(socket.user, log.from_client_id, log, channel);
-                                        // var rec = data.receiver;
-                                        // channel.publish("from_" + sender, '', new Buffer(JSON.stringify(data)), {persistent: true});
+                                    socket.on(recieve, function (data) {
+                                        var notes_log = JSON.parse(data);
+                                        log.info("[ on ",recieve," ] ", " got called with data: ", data);
+                                        utils.insert_note(socket.user, notes_log.from_client_id, notes_log, channel);
                                     });
 
                                     channel.consume(queue_name, function (msg) {
-                                        console.log(msg);
+                                        log.warn("[ channel.consume ] Consuming message from rabbitmq queue: ", queue_name, " msg: ", msg.content.toString());
                                         hash = msg.content.toString();
-                                        redis_api.read_log(hash, function (log) {
 
-                                            socket.emit('msg', log, function (err, data) {
+                                        redis_api.read_log(hash, function (note_log) {
+                                            log.info("[ channel.consume/redis.read ] Reading complete log from redis");
+
+                                            socket.emit(send, note_log, function (err, data) {
+                                                log.info("[ channel.consume/on ",send," ] ", "Sending log to user with client_id: ", socket.user.client_id);
                                                 if (err) {
-                                                    console.log("Did not recieve by client ", err);
+                                                    log.warn("[ channel.consume/on ",send," ] ", "Acknowledgment is not recieved by server");
                                                 }
                                                 else {
-                                                    console.log("Message is recieved by client");
+                                                    console.log("[ channel.consume/on ",send," ] ", "Received message acknowledgment");
                                                     redis_api.delete_log(hash);
                                                     channel.ack(msg);
+                                                    log.warn("[ channel.consume/on ",send," ] ", "Removing log from rabbitmq queue with queue name: ", queue_name);
+
                                                 }
                                             })
                                         })
@@ -145,18 +184,18 @@ module.exports.run = function (worker) {
                                 socket.emit("auth-success", user);
                             }
                             else {
-                                console.log("No user found")
+                                log.error("[on ", authentication, " ] ", "No user found")
                             }
                         });
                         socket.authState = "authenticated";
                     }
                 });
-                console.log(socket.authState);
             })
 
-            socket.on('disconnect', function () {
-                console.log("client disconnected")
+            socket.on(disconnect, function () {
+                log.info("client disconnected with cliend-id: ", socket.client_id);
                 channel.close();
+                socket.disconnect();
             })
         });
     });

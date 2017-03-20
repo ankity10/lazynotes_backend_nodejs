@@ -4,7 +4,8 @@
   "description": "Server side code for Lazynotes",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "python3 clean.py",
+    "test": "python3 -m pytest -s ./test/rest_api_tests/*.py",
     "start": "node server.js"
   },
   "author": "Ankit Yadav, Rushabh Kabra, Kartikeya Bhatnagar, Nisha Khiyani",
