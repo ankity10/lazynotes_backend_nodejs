@@ -2700,3 +2700,68 @@
 {"level":"info","message":"[ insert_log ] Note log inserted into redis with key hash: abc:c3484e7b6883a4ffa859b45d2034a9600087b1e69542b6c589beb0e4b113060e:dea6d86e096911e78702b8763fc5fabb","timestamp":"2017-03-20T18:49:19.390Z"}
 {"level":"info","message":"[ insert note/mongo ] Note updated successfully in Database","timestamp":"2017-03-20T18:49:19.390Z"}
 {"level":"info","message":"client disconnected with cliend-id:  3b8d79d801b411e7ad9d2c337a10157b","timestamp":"2017-03-20T18:49:27.308Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T06:23:03.673Z"}
+{"level":"warn","message":"warning logs","timestamp":"2017-03-21T06:23:03.675Z"}
+{"level":"error","message":"error logs","timestamp":"2017-03-21T06:23:03.675Z"}
+{"level":"warn","message":"debug logs","timestamp":"2017-03-21T06:23:03.675Z"}
+{"level":"info","message":"[ on connect ] Connected to Redis Server","timestamp":"2017-03-21T06:23:03.682Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T07:08:02.380Z"}
+{"level":"info","message":"[ on connect ] Connected to Redis Server","timestamp":"2017-03-21T07:08:02.393Z"}
+{"level":"warn","message":"warning logs","timestamp":"2017-03-21T07:08:02.382Z"}
+{"level":"error","message":"error logs","timestamp":"2017-03-21T07:08:02.382Z"}
+{"level":"warn","message":"debug logs","timestamp":"2017-03-21T07:08:02.383Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T07:10:05.527Z"}
+{"level":"warn","message":"warning logs","timestamp":"2017-03-21T07:10:05.529Z"}
+{"level":"error","message":"error logs","timestamp":"2017-03-21T07:10:05.529Z"}
+{"level":"warn","message":"debug logs","timestamp":"2017-03-21T07:10:05.529Z"}
+{"level":"info","message":"[ on connect ] Connected to Redis Server","timestamp":"2017-03-21T07:10:05.536Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T07:10:38.352Z"}
+{"level":"warn","message":"warning logs","timestamp":"2017-03-21T07:10:38.354Z"}
+{"level":"error","message":"error logs","timestamp":"2017-03-21T07:10:38.354Z"}
+{"level":"warn","message":"debug logs","timestamp":"2017-03-21T07:10:38.354Z"}
+{"level":"info","message":"[ on connect ] Connected to Redis Server","timestamp":"2017-03-21T07:10:38.363Z"}
+{"password":"ankit","client_id":"ankit","username":"ankit","level":"warn","message":"[ /auth/signup ] Requested, post params: ","timestamp":"2017-03-21T07:11:01.309Z"}
+{"client_id":"ankit","level":"warn","message":"[ /auth/signup ] /auth/signup","timestamp":"2017-03-21T07:11:01.310Z"}
+{"level":"warn","message":"[ /auth/signup ] Client with client id:  ankit  is old","timestamp":"2017-03-21T07:11:01.335Z"}
+{"level":"info","message":"[ /auth/signup ] Queue created successfully with name  ankit:ankit","timestamp":"2017-03-21T07:11:01.340Z"}
+{"level":"info","message":"[ /auth/signup ] User signup successful","timestamp":"2017-03-21T07:11:01.341Z"}
+{"level":"warn","message":"[ /notes ] requested, User:  ankit","timestamp":"2017-03-21T07:11:01.367Z"}
+{"level":"info","message":"[ /notes ] Notes fetched from database successfully","timestamp":"2017-03-21T07:11:01.372Z"}
+{"password":"ankit","client_id":"ankit","username":"ankit","level":"warn","message":"[ /auth/signup ] Requested, post params: ","timestamp":"2017-03-21T07:11:02.421Z"}
+{"client_id":"ankit","level":"warn","message":"[ /auth/signup ] /auth/signup","timestamp":"2017-03-21T07:11:02.422Z"}
+{"level":"warn","message":"[ /auth/signup ] Client with client id:  ankit  is old","timestamp":"2017-03-21T07:11:02.426Z"}
+{"level":"info","message":"[ /auth/signup ] Queue created successfully with name  ankit:ankit","timestamp":"2017-03-21T07:11:02.428Z"}
+{"level":"info","message":"[ /auth/signup ] User signup successful","timestamp":"2017-03-21T07:11:02.428Z"}
+{"level":"warn","message":"[ /rabbitmq/queue/message/count ] requested, Username:  ankit params => {queue: test-queue }","timestamp":"2017-03-21T07:11:02.440Z"}
+{"level":"info","message":"[ /rabbitmq/queue/message/count ] Message count fetched successfully from rabbitmq server [object Object]","timestamp":"2017-03-21T07:11:04.369Z"}
+{"password":"ankit","client_id":"ankit","username":"ankit","level":"warn","message":"[ /auth/signup ] Requested, post params: ","timestamp":"2017-03-21T07:11:04.547Z"}
+{"client_id":"ankit","level":"warn","message":"[ /auth/signup ] /auth/signup","timestamp":"2017-03-21T07:11:04.548Z"}
+{"level":"warn","message":"[ /auth/signup ] Client with client id:  ankit  is old","timestamp":"2017-03-21T07:11:04.552Z"}
+{"level":"info","message":"[ /auth/signup ] Queue created successfully with name  ankit:ankit","timestamp":"2017-03-21T07:11:04.553Z"}
+{"level":"info","message":"[ /auth/signup ] User signup successful","timestamp":"2017-03-21T07:11:04.554Z"}
+{"password":"ankit","client_id":"ankit","username":"ankit","level":"warn","message":"[ /auth/login ] requested, post params","timestamp":"2017-03-21T07:11:04.573Z"}
+{"level":"info","message":"[ /auth/login ] Authentication successful","timestamp":"2017-03-21T07:11:04.601Z"}
+{"level":"warn","message":"[ /auth/login ] Client with client id:  ankit  is old","timestamp":"2017-03-21T07:11:04.602Z"}
+{"level":"info","message":"[ /auth/login ] Queue created successfully with name  ankit:ankit","timestamp":"2017-03-21T07:11:04.603Z"}
+{"level":"info","message":"[ /auth/login ] User Logged in successfully","timestamp":"2017-03-21T07:11:04.604Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T07:12:36.502Z"}
+{"level":"warn","message":"warning logs","timestamp":"2017-03-21T07:12:36.504Z"}
+{"level":"error","message":"error logs","timestamp":"2017-03-21T07:12:36.505Z"}
+{"level":"warn","message":"debug logs","timestamp":"2017-03-21T07:12:36.505Z"}
+{"level":"info","message":"[ on connect ] Connected to Redis Server","timestamp":"2017-03-21T07:12:36.513Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T07:13:23.414Z"}
+{"level":"warn","message":"warning logs","timestamp":"2017-03-21T07:13:23.416Z"}
+{"level":"error","message":"error logs","timestamp":"2017-03-21T07:13:23.416Z"}
+{"level":"warn","message":"debug logs","timestamp":"2017-03-21T07:13:23.416Z"}
+{"level":"info","message":"[ on connect ] Connected to Redis Server","timestamp":"2017-03-21T07:13:23.425Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T07:13:59.008Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T07:15:31.935Z"}
+{"level":"warn","message":"warning logs","timestamp":"2017-03-21T07:15:31.937Z"}
+{"level":"error","message":"error logs","timestamp":"2017-03-21T07:15:31.938Z"}
+{"level":"warn","message":"debug logs","timestamp":"2017-03-21T07:15:31.938Z"}
+{"level":"info","message":"[ on connect ] Connected to Redis Server","timestamp":"2017-03-21T07:15:31.946Z"}
+{"level":"info","message":"Info logs","timestamp":"2017-03-21T07:18:09.378Z"}
+{"level":"warn","message":"warning logs","timestamp":"2017-03-21T07:18:09.380Z"}
+{"level":"error","message":"error logs","timestamp":"2017-03-21T07:18:09.380Z"}
+{"level":"warn","message":"debug logs","timestamp":"2017-03-21T07:18:09.380Z"}
+{"level":"info","message":"[ on connect ] Connected to Redis Server","timestamp":"2017-03-21T07:18:09.389Z"}

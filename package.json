@@ -6,7 +6,7 @@
   "scripts": {
     "clean": "python3 clean.py",
     "test": "python3 -m pytest -s ./test/rest_api_tests/*.py",
-    "start": "node server.js"
+    "start": "python3 start.py"
   },
   "author": "Ankit Yadav, Rushabh Kabra, Kartikeya Bhatnagar, Nisha Khiyani",
   "license": "ISC",
