@@ -3,7 +3,7 @@ var SocketCluster = require('socketcluster').SocketCluster;
 
 var options = {
     authkey: 'thisismysecretkey',
-    workers: Number(argv.w) || Number(process.env.SOCKETCLUSTER_WORKERS) || 1,
+    workers: Number(argv.w) || Number(process.env.SOCKETCLUSTER_WORKERS) || 5,
     brokers: Number(argv.b) || Number(process.env.SOCKETCLUSTER_BROKERS) || 1,
     port: Number(argv.p) || 8000,
     // Switch wsEngine to 'uws' for a MAJOR performance boost (beta)

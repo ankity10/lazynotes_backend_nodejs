@@ -7,7 +7,7 @@ from .http_service import AuthService as Auth
 from .http_service import RabbitmqService
 from .rabbitmq_service import Rabbitmq
 
-queue_name = "test-queue"
+queue_name = "tests-queue"
 
 
 def setup_module(module):

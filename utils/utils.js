@@ -1,6 +1,6 @@
 var redis_api = require("./redis.js");
 // User model to manipulate data in mongodb
-var User = require('./models/user');
+var User = require('./../models/user');
 var Type = require('type-of-is');
 
 
@@ -93,7 +93,7 @@ module.exports =
             });
 
             //Updating Notes collection
-            var db = require('./models/note.js');
+            var db = require('./../models/note.js');
             var note_collection = db(username);
 
             note_collection.findOne({"note_hash": note_log['note_hash']}, function (error, result) {

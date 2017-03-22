@@ -4,9 +4,9 @@
   "description": "Server side code for Lazynotes",
   "main": "server.js",
   "scripts": {
-    "clean": "python3 clean.py",
-    "test": "python3 -m pytest -s ./test/rest_api_tests/*.py",
-    "start": "python3 start.py"
+    "clean": "python3 ./scripts/clean.py",
+    "test": "python3 -m pytest -s ./tests/rest_api_tests/*.py",
+    "start": "python3 ./scripts/start.py"
   },
   "author": "Ankit Yadav, Rushabh Kabra, Kartikeya Bhatnagar, Nisha Khiyani",
   "license": "ISC",

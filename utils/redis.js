@@ -56,11 +56,15 @@ module.exports = {
         })
     },
 
-    delete_log: function (key_hash) {
+    delete_log: function (key_hash, callback) {
         client.del(key_hash, function (error, reply) {
             if (error)
                 log.error('[ delete_log ] Error in delete_log: ' + error);
-            log.info("[ delete_log ] Note log deleted successfully with key hash: " + key_hash);
+            else {
+                log.info("[ delete_log ] Note log deleted successfully with key hash: " + key_hash);
+                callback();
+            }
+
         });
     }
 

@@ -5,7 +5,7 @@ var express = require('express');
 var apiRouter = express.Router();
 
 // Creating instance of config module
-var config = require('./config/config');
+var config = require('./../config/config');
 
 // Exporting apiRouter, so that in can be included in root express app.
 module.exports = apiRouter;
@@ -27,13 +27,13 @@ var passport = require('passport');
 apiRouter.use(passport.initialize());
 
 // loading passport configuration.
-require('./config/passport')(passport);
+require('./../config/passport')(passport);
 
 // User model to manipulate data in mongodb
-var User = require('./models/user');
+var User = require('./../models/user');
 
 // Note model to manipulate data in mongodb
-var Note = require('./models/note');
+var Note = require('./../models/note');
 
 // crypto module to generate verification token
 var crypto = require('crypto');
@@ -52,7 +52,7 @@ const utility = require('lodash');
 
 
 // rabbit utility to create queues
-var rabbit = require('./rabbit_util');
+var rabbit = require('./../utils/rabbit_util');
 
 //
 var winston = require("winston");
@@ -341,7 +341,7 @@ apiRouter.post("/auth/login", function (req, res) {
 
 apiRouter.get('/notes', passport.authenticate('jwt', {session: false}), function (req, res) {
     log.warn("[ /notes ] requested, User: ", req.user.username);
-    var db = require('./models/note.js');
+    var db = require('./../models/note.js');
     var Note = db(req.user.username);
 
     Note.find({}, function (err, notes) {

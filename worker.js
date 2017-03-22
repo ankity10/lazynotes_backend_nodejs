@@ -2,14 +2,14 @@ var fs = require('fs');
 var express = require('express');
 var serveStatic = require('serve-static');
 var path = require('path');
-var rabbit = require('./rabbit');
+var rabbit = require('./utils/rabbit');
 var verify_jwt = require('./utils/verify_jwt');
 // User model to manipulate data in mongodb
 var User = require('./models/user');
 
-var redis_api = require('./redis');
+var redis_api = require('./utils/redis');
 
-var utils = require('./utils');
+var utils = require('./utils/utils');
 
 // Creating instance of config module
 var config = require('./config/config');
@@ -100,7 +100,7 @@ module.exports.run = function (worker) {
 
     httpServer.on('request', app);
 
-    var apiRouter = require('./api');
+    var apiRouter = require('./api/api');
     app.use('/api', apiRouter);
 
     var rootRouter = express.Router();
@@ -146,15 +146,15 @@ module.exports.run = function (worker) {
 
 
                                 socket.on(set_client_id, function (data) {
-                                    log.info("[ on ",set_client_id," ] ","set-client-id got called with client-id:", data);
+                                    log.info("[ on ", set_client_id, " ] ", "set-client-id got called with client-id:", data);
                                     socket.client_id = data;
                                     queue_name = socket.user.username + ":" + socket.client_id;
                                     channel.assertQueue(queue_name, {durable: true});
-                                    log.warn("[ on ",set_client_id," ] ","Queue created successfully with name: ", queue_name);
+                                    log.warn("[ on ", set_client_id, " ] ", "Queue created successfully with name: ", queue_name);
 
                                     socket.on(recieve, function (data) {
                                         var notes_log = JSON.parse(data);
-                                        log.info("[ on ",recieve," ] ", " got called with data: ", data);
+                                        log.info("[ on ", recieve, " ] ", " got called with data: ", data);
                                         utils.insert_note(socket.user, notes_log.from_client_id, notes_log, channel);
                                     });
 
@@ -166,15 +166,17 @@ module.exports.run = function (worker) {
                                             log.info("[ channel.consume/redis.read ] Reading complete log from redis");
 
                                             socket.emit(send, note_log, function (err, data) {
-                                                log.info("[ channel.consume/on ",send," ] ", "Sending log to user with client_id: ", socket.user.client_id);
+                                                log.info("[ channel.consume/on ", send, " ] ", "Sending log to user with client_id: ", socket.user.client_id);
                                                 if (err) {
-                                                    log.warn("[ channel.consume/on ",send," ] ", "Acknowledgment is not recieved by server");
+                                                    log.warn("[ channel.consume/on ", send, " ] ", "Acknowledgment is not recieved by server");
                                                 }
                                                 else {
-                                                    console.log("[ channel.consume/on ",send," ] ", "Received message acknowledgment");
-                                                    redis_api.delete_log(hash);
-                                                    channel.ack(msg);
-                                                    log.warn("[ channel.consume/on ",send," ] ", "Removing log from rabbitmq queue with queue name: ", queue_name);
+                                                    console.log("[ channel.consume/on ", send, " ] ", "Received message acknowledgment");
+                                                    redis_api.delete_log(hash, function () {
+                                                        channel.ack(msg);
+                                                        log.warn("[ channel.consume/on ", send, " ] ", "Removing log from rabbitmq queue with queue name: ", queue_name);
+
+                                                    });
 
                                                 }
                                             })
