@@ -70,6 +70,22 @@ module.exports.run = function (worker) {
                     }
                     else if (data) {
                         log.info("[ middleware_emit ] Authentication successful");
+
+                        User.findOne({_id: data._id}, function (err, user) {
+                            if (err) {
+                                log.error("[ on ", authentication, " ] ", "Database Error: ", err);
+                            }
+                            else if (user) {
+                                log.info("[ on ", authentication, " ] ", "User found in database");
+                                req.socket.user = user;
+
+                                // socket.emit("auth-success", user);
+                            }
+                            else {
+                                log.error("[on ", authentication, " ] ", "No user found")
+                            }
+                        });
+
                         next();
                     }
                 });

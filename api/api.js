@@ -378,10 +378,17 @@ apiRouter.get("/rabbitmq/queue/message/count", passport.authenticate("jwt", {ses
             function (error, response, body) {
                 if (!error && response.statusCode == 200) {
                     // console.log(body)
+                    var msg_count;
+                    try {
+                        msg_count = JSON.parse(body).backing_queue_status.len;
+                    }
+                    catch (err){
+                        msg_count = 0;
+                    }
                     log.info("[ /rabbitmq/queue/message/count ] Message count fetched successfully from rabbitmq server " + JSON.parse(body).backing_queue_status);
                     res.json({
                         success: 1,
-                        message_count: JSON.parse(body).backing_queue_status.len,
+                        message_count: msg_count,
                     });
                 }
                 else if (!error) {
